@@ -6,6 +6,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Image,
   Text,
   View,
 } from 'react-native';
@@ -22,6 +23,7 @@ import { getAgencies, getFeaturedAgencies } from '@/src/data/repositories/agenci
 import { getFeaturedProperties } from '@/src/data/repositories/properties';
 import { Agency, Property, PropertyType, TransactionType } from '@/src/data/types';
 import { colors, spacing, typography } from '@/src/theme';
+import Logo from '@/assets/images/Nyumba-Logo.png';
 
 const quickChips: { label: string; transactionType?: TransactionType; propertyType?: PropertyType }[] = [
   { label: 'For Rent', transactionType: 'rent' },
@@ -90,17 +92,25 @@ export default function DiscoverScreen() {
         }
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Find your dream home</Text>
-            <Pressable style={styles.locationRow} onPress={() => router.push('/county-picker')}>
-              <Ionicons name="location" size={16} color={colors.primary} />
-              <Text style={styles.locationText}>{county}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
-            </Pressable>
+          <View style={styles.logoRow}>
+            <View style={styles.logoMark}>
+              <Image source={Logo} style={styles.logoImage} />
+            </View>
+            <Text style={styles.logoText}>Nyumba</Text>
           </View>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoText}>N</Text>
-          </View>
+
+          <Pressable onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
+            <Ionicons name="person" size={24} color={colors.primary} />
+          </Pressable>
+        </View>
+
+        <View style={styles.greetingBlock}>
+          <Text style={styles.greeting}>Find your dream home</Text>
+          <Pressable style={styles.locationRow} onPress={() => router.push('/county-picker')}>
+            <Ionicons name="location" size={16} color={colors.primary} />
+            <Text style={styles.locationText}>{county}</Text>
+            <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
+          </Pressable>
         </View>
 
         <SearchBar onPress={() => router.push('/(tabs)/search')} />
@@ -201,9 +211,31 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.lg,
+    alignItems: 'center',
     marginTop: spacing.sm,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  logoMark: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoImage: {
+    width: 36,
+    height: 36,
+  },
+  logoText: {
+    ...typography.title,
+    color: colors.primary,
+  },
+  greetingBlock: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
   },
   greeting: {
     ...typography.hero,
@@ -218,18 +250,6 @@ const styles = StyleSheet.create({
   locationText: {
     ...typography.bodyBold,
     color: colors.primary,
-  },
-  logoMark: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoText: {
-    ...typography.title,
-    color: colors.textInverse,
   },
   chips: {
     marginVertical: spacing.lg,
