@@ -1,31 +1,231 @@
-import { StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+import { AgencyCard } from '@/src/components/AgencyCard';
+import { Chip } from '@/src/components/Chip';
+import { PropertyCard } from '@/src/components/PropertyCard';
+import { SearchBar } from '@/src/components/SearchBar';
+import { SectionHeader } from '@/src/components/SectionHeader';
+import { useApp } from '@/src/context/AppContext';
+import { getAgencies, getFeaturedAgencies } from '@/src/data/repositories/agencies';
+import { getFeaturedProperties } from '@/src/data/repositories/properties';
+import { Agency, Property, PropertyType, TransactionType } from '@/src/data/types';
+import { colors, spacing, typography } from '@/src/theme';
 
-export default function TabOneScreen() {
+const quickChips: { label: string; transactionType?: TransactionType; propertyType?: PropertyType }[] = [
+  { label: 'For Rent', transactionType: 'rent' },
+  { label: 'For Sale', transactionType: 'sale' },
+  { label: 'Apartments', propertyType: 'apartment' },
+  { label: 'Houses', propertyType: 'house' },
+  { label: 'Bedsitters', propertyType: 'bedsitter' },
+  { label: 'Land', propertyType: 'land' },
+];
+
+export default function DiscoverScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { county, setFilters, updateFilters } = useApp();
+
+  const [featuredAgencies, setFeaturedAgencies] = useState<Agency[]>([]);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeChip, setActiveChip] = useState(0);
+
+  const load = useCallback(async () => {
+    const [featuredA, allA, featuredP] = await Promise.all([
+      getFeaturedAgencies(county),
+      getAgencies({ county }),
+      getFeaturedProperties(county),
+    ]);
+    setFeaturedAgencies(featuredA);
+    setAgencies(allA);
+    setFeaturedProperties(featuredP);
+  }, [county]);
+
+  useEffect(() => {
+    setLoading(true);
+    load().finally(() => setLoading(false));
+  }, [load]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
+
+  const onChipPress = (index: number) => {
+    setActiveChip(index);
+    const chip = quickChips[index];
+    setFilters({
+      transactionType: chip.transactionType ?? 'all',
+      propertyType: chip.propertyType ?? 'all',
+    });
+    router.push('/(tabs)/search');
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Find your dream home</Text>
+            <Pressable style={styles.locationRow} onPress={() => router.push('/county-picker')}>
+              <Ionicons name="location" size={16} color={colors.primary} />
+              <Text style={styles.locationText}>{county}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={styles.logoMark}>
+            <Text style={styles.logoText}>N</Text>
+          </View>
+        </View>
+
+        <SearchBar onPress={() => router.push('/(tabs)/search')} />
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chips}
+          contentContainerStyle={styles.chipsContent}
+        >
+          {quickChips.map((chip, i) => (
+            <Chip
+              key={chip.label}
+              label={chip.label}
+              active={activeChip === i}
+              onPress={() => onChipPress(i)}
+            />
+          ))}
+        </ScrollView>
+
+        {loading ? (
+          <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
+        ) : (
+          <>
+            <SectionHeader title="Featured agencies" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {featuredAgencies.map((agency) => (
+                <AgencyCard
+                  key={agency.id}
+                  agency={agency}
+                  compact
+                  onPress={() => router.push(`/agency/${agency.id}`)}
+                />
+              ))}
+            </ScrollView>
+
+            {featuredProperties.length > 0 && (
+              <>
+                <SectionHeader
+                  title="Homes you might love"
+                  actionLabel="See all"
+                  onAction={() => {
+                    updateFilters({ featuredOnly: true });
+                    router.push('/(tabs)/search');
+                  }}
+                />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {featuredProperties.map((property) => (
+                    <PropertyCard
+                      key={property.id}
+                      property={property}
+                      horizontal
+                      onPress={() => router.push(`/property/${property.id}`)}
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            <SectionHeader title={`Agencies in ${county}`} />
+            {agencies.length === 0 ? (
+              <Text style={styles.empty}>No agencies in this county yet. Try another area.</Text>
+            ) : (
+              agencies.map((agency) => (
+                <AgencyCard
+                  key={agency.id}
+                  agency={agency}
+                  onPress={() => router.push(`/agency/${agency.id}`)}
+                />
+              ))
+            )}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.huge,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  greeting: {
+    ...typography.hero,
+    color: colors.text,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  locationText: {
+    ...typography.bodyBold,
+    color: colors.primary,
+  },
+  logoMark: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  logoText: {
+    ...typography.title,
+    color: colors.textInverse,
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+  chips: {
+    marginVertical: spacing.lg,
+  },
+  chipsContent: {
+    paddingRight: spacing.lg,
+  },
+  empty: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
   },
 });
