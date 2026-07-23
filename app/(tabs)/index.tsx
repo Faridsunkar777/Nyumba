@@ -35,14 +35,19 @@ const quickChips: { label: string; transactionType?: TransactionType; propertyTy
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { county, setFilters, updateFilters } = useApp();
+  const { county, filters, setFilters, updateFilters } = useApp();
 
   const [featuredAgencies, setFeaturedAgencies] = useState<Agency[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeChip, setActiveChip] = useState(0);
+
+  const activeChip = quickChips.findIndex(
+    (chip) =>
+      (chip.transactionType ?? 'all') === (filters.transactionType ?? 'all') &&
+      (chip.propertyType ?? 'all') === (filters.propertyType ?? 'all')
+  );
 
   const load = useCallback(async () => {
     const [featuredA, allA, featuredP] = await Promise.all([
@@ -67,7 +72,6 @@ export default function DiscoverScreen() {
   };
 
   const onChipPress = (index: number) => {
-    setActiveChip(index);
     const chip = quickChips[index];
     setFilters({
       transactionType: chip.transactionType ?? 'all',
@@ -122,7 +126,12 @@ export default function DiscoverScreen() {
         ) : (
           <>
             <SectionHeader title="Featured agencies" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalList}
+              contentContainerStyle={styles.horizontalListContent}
+            >
               {featuredAgencies.map((agency) => (
                 <AgencyCard
                   key={agency.id}
@@ -143,7 +152,12 @@ export default function DiscoverScreen() {
                     router.push('/(tabs)/search');
                   }}
                 />
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.horizontalList}
+                  contentContainerStyle={styles.horizontalListContent}
+                >
                   {featuredProperties.map((property) => (
                     <PropertyCard
                       key={property.id}
@@ -221,6 +235,13 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
   },
   chipsContent: {
+    paddingRight: spacing.lg,
+  },
+  horizontalList: {
+    marginVertical: -spacing.sm,
+  },
+  horizontalListContent: {
+    paddingVertical: spacing.md,
     paddingRight: spacing.lg,
   },
   empty: {

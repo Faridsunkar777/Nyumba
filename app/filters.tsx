@@ -62,7 +62,6 @@ export default function FiltersScreen() {
       bedrooms: bedrooms || undefined,
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
-      county,
     });
     router.back();
   };
