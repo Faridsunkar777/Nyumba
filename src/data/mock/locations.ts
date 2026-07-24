@@ -29,9 +29,16 @@ export const counties: County[] = [
   {
     id: 'kajiado',
     name: 'Kajiado',
-    estates: ['Syokimau', 'Kitengela', 'Ngong', 'Ongata Rongai', 'Athi River'],
+    estates: ['Kitengela', 'Ngong', 'Ongata Rongai'],
     lat: -1.85,
     lng: 36.78,
+  },
+  {
+    id: 'machakos',
+    name: 'Machakos',
+    estates: ['Syokimau', 'Athi River', 'Mlolongo', 'Machakos Town'],
+    lat: -1.5177,
+    lng: 37.2634,
   },
   {
     id: 'mombasa',

@@ -52,7 +52,7 @@ export default function SearchScreen() {
         const list = await getProperties({
           ...filters,
           query,
-          county: filters.county ?? county,
+          county,
         });
         setProperties(list);
       } else {
@@ -100,7 +100,7 @@ export default function SearchScreen() {
           <Chip label="Agencies" active={mode === 'agencies'} onPress={() => setMode('agencies')} />
         </View>
         <Text style={styles.hint}>
-          Showing in {filters.county ?? county}
+          Showing in {county}
           {filters.transactionType && filters.transactionType !== 'all'
             ? ` · ${filters.transactionType === 'rent' ? 'Rent' : 'Sale'}`
             : ''}
