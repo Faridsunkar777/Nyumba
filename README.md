@@ -6,18 +6,20 @@ Browse trusted agencies, open their storefront, and explore sale & rent listings
 
 ## Features
 
-- **Discover agencies** by county (Nairobi, Mombasa, Kisumu, and more)
+- **Discover agencies** by county (Nairobi, Mombasa, Kisumu, Machakos, and more)
 - **Agency storefronts** with rent / sale / featured tabs
-- **Property detail** with gallery, amenities, map-ready coords
+- **Property detail** with gallery, amenities, viewing requests
 - **Search & filters** (transaction type, property type, estate, beds, KES price)
-- **Map explore** with property pins
-- **Favorites** (persisted with AsyncStorage)
-- **Call & WhatsApp** deep links to agencies
-- **Onboarding** flow for first launch
+- **Map explore** (native pins; web list + coords)
+- **Auth** — optional login / signup (Supabase)
+- **Favorites** — local + cloud when logged in
+- **Call & WhatsApp** deep links
+- **Onboarding** on first launch
+- **Web** — same app in the browser (`npm run web`)
 
-## Run (Expo Go on your iPhone)
+## Run (phone or web)
 
-This project uses **Expo SDK 54**, which matches the **App Store version of Expo Go**.
+**Expo SDK 54** (works with App Store Expo Go).
 
 ```bash
 cd Nyumba
@@ -25,17 +27,17 @@ npm install
 npx expo start
 ```
 
-1. Open **Expo Go** on your iPhone (install from the App Store if needed).
-2. Put your phone on the **same Wi‑Fi** as your Mac.
-3. Scan the **QR code** in the terminal (Camera app or Expo Go scanner).
+- **iPhone:** Expo Go → scan QR (same Wi‑Fi). Tunnel: `npx expo start --tunnel`
+- **Browser:** press `w` or `npm run web`
+- **Export static web:** `npm run web:export`
 
-If the QR opens but fails to connect, try tunnel mode:
+### Optional: live backend (Supabase free tier)
 
-```bash
-npx expo start --tunnel
-```
+Without keys, the app uses **demo mock data**.
 
-Then scan again.
+1. Follow [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md)
+2. Copy `.env.example` → `.env` and add your project URL + anon key
+3. Restart Expo with cache clear: `npx expo start -c`
 
 ## Project structure
 

@@ -4,16 +4,31 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { useApp } from '@/src/context/AppContext';
+import { useAuth } from '@/src/context/AuthContext';
 import { colors, radius, shadows, spacing, typography } from '@/src/theme';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { county, favoriteIds } = useApp();
+  const { county, favoriteIds, dataMode } = useApp();
+  const { user, profile, signOut, isConfigured } = useAuth();
+
+  const displayName =
+    profile?.fullName ||
+    user?.email?.split('@')[0] ||
+    (user ? 'Member' : 'Guest');
+
+  const initials = displayName
+    .split(' ')
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const resetDemo = () => {
-    Alert.alert('Reset demo data?', 'This clears favorites, county, and onboarding.', [
+    Alert.alert('Reset local data?', 'Clears favorites, county, and onboarding on this device.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',
@@ -30,6 +45,19 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const onSignOut = () => {
+    Alert.alert('Sign out?', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.header}>
@@ -38,13 +66,39 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>YK</Text>
+          <Text style={styles.avatarText}>{initials || '?'}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>You (Demo)</Text>
-          <Text style={styles.meta}>House hunter in Kenya</Text>
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.meta}>
+            {user?.email ?? 'Browsing as guest'}
+            {dataMode === 'mock' ? ' · Demo data' : ' · Live data'}
+          </Text>
         </View>
       </View>
+
+      {!user ? (
+        <View style={styles.authActions}>
+          <PrimaryButton
+            label="Sign in"
+            onPress={() => router.push('/login' as any)}
+            fullWidth
+          />
+          <PrimaryButton
+            label="Create account"
+            variant="secondary"
+            onPress={() => router.push('/signup' as any)}
+            fullWidth
+          />
+        </View>
+      ) : (
+        <PrimaryButton
+          label="Sign out"
+          variant="ghost"
+          onPress={onSignOut}
+          style={{ marginTop: spacing.md }}
+        />
+      )}
 
       <Text style={styles.section}>Preferences</Text>
       <Pressable style={styles.row} onPress={() => router.push('/county-picker')}>
@@ -62,29 +116,31 @@ export default function ProfileScreen() {
           <Text style={styles.rowValue}>KES (Kenyan Shilling)</Text>
         </View>
       </View>
-      <View style={styles.row}>
+      <Pressable style={styles.row} onPress={() => router.push('/(tabs)/favorites')}>
         <Ionicons name="heart-outline" size={22} color={colors.primary} />
         <View style={styles.rowBody}>
           <Text style={styles.rowTitle}>Saved homes</Text>
           <Text style={styles.rowValue}>{favoriteIds.length}</Text>
         </View>
-      </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
 
       <Text style={styles.section}>About</Text>
       <View style={styles.about}>
         <Text style={styles.aboutTitle}>Nyumba</Text>
         <Text style={styles.aboutBody}>
-          Prototype house-hunting app for Kenya. Browse real estate agencies like
-          restaurants on Uber Eats, explore their listings, and contact them on WhatsApp
-          or call.
+          House hunting for Kenya — discover agencies, browse listings, and contact
+          agents on WhatsApp or call.
         </Text>
         <Text style={styles.disclaimer}>
-          Demo data only — not a live marketplace. Built for agency demos.
+          {isConfigured
+            ? 'Connected to Supabase when keys are set.'
+            : 'Using built-in demo data until Supabase is configured.'}
         </Text>
       </View>
 
       <Pressable style={styles.reset} onPress={resetDemo}>
-        <Text style={styles.resetText}>Reset demo data</Text>
+        <Text style={styles.resetText}>Reset local demo data</Text>
       </Pressable>
     </View>
   );
@@ -132,6 +188,11 @@ const styles = StyleSheet.create({
   meta: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  authActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
   section: {
     ...typography.label,
