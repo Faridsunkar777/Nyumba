@@ -7,15 +7,21 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 
+import {
+  addRemoteFavorite,
+  fetchRemoteFavoriteIds,
+  removeRemoteFavorite,
+} from '@/src/data/repositories/favorites';
 import { getDefaultCountyName } from '@/src/data/repositories/locations';
-import { AuthUser, PropertyFilters } from '@/src/data/types';
+import { PropertyFilters } from '@/src/data/types';
+import { useAuth } from './AuthContext';
 
 const KEYS = {
   county: '@nyumba/county',
   favorites: '@nyumba/favorites',
   onboarding: '@nyumba/onboarding_done',
-  user: '@nyumba/user',
 };
 
 type AppContextValue = {
@@ -31,11 +37,8 @@ type AppContextValue = {
   onboardingDone: boolean;
   completeOnboarding: () => void;
   hydrated: boolean;
-  user: AuthUser | null;
+  dataMode: 'mock' | 'live';
   isAuthenticated: boolean;
-  login: (email: string, _password: string) => Promise<{ ok: boolean; error?: string }>;
-  signup: (name: string, email: string, _password: string, phone?: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
 };
 
 const defaultFilters: PropertyFilters = {
@@ -46,49 +49,74 @@ const defaultFilters: PropertyFilters = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { user, isConfigured } = useAuth();
   const [county, setCountyState] = useState(getDefaultCountyName());
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [filters, setFilters] = useState<PropertyFilters>(defaultFilters);
   const [onboardingDone, setOnboardingDone] = useState(true);
   const [hydrated, setHydrated] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [storedCounty, storedFavs, storedOnboarding, storedUser] = await Promise.all([
+        const [storedCounty, storedFavs, storedOnboarding] = await Promise.all([
           AsyncStorage.getItem(KEYS.county),
           AsyncStorage.getItem(KEYS.favorites),
           AsyncStorage.getItem(KEYS.onboarding),
-          AsyncStorage.getItem(KEYS.user),
         ]);
+
         if (storedCounty) setCountyState(storedCounty);
         if (storedFavs) setFavoriteIds(JSON.parse(storedFavs));
-        if (storedOnboarding === null) setOnboardingDone(false);
-        else setOnboardingDone(storedOnboarding === '1');
-        if (storedUser) setUser(JSON.parse(storedUser));
+
+        // Web is a full website — skip mobile onboarding carousel
+        if (Platform.OS === 'web') {
+          setOnboardingDone(true);
+        } else if (storedOnboarding === null) {
+          setOnboardingDone(false);
+        } else {
+          setOnboardingDone(storedOnboarding === '1');
+        }
       } catch {
-        // ignore storage errors in prototype
+        // ignore
       } finally {
         setHydrated(true);
       }
     })();
   }, []);
 
+  // Sync favorites from cloud when logged in
+  useEffect(() => {
+    if (!user?.id || !isConfigured) return;
+    fetchRemoteFavoriteIds(user.id).then((ids) => {
+      if (ids.length) {
+        setFavoriteIds(ids);
+        AsyncStorage.setItem(KEYS.favorites, JSON.stringify(ids)).catch(() => {});
+      }
+    });
+  }, [user?.id, isConfigured]);
+
   const setCounty = useCallback((value: string) => {
     setCountyState(value);
     AsyncStorage.setItem(KEYS.county, value).catch(() => {});
   }, []);
 
-  const toggleFavorite = useCallback((propertyId: string) => {
-    setFavoriteIds((prev) => {
-      const next = prev.includes(propertyId)
-        ? prev.filter((id) => id !== propertyId)
-        : [...prev, propertyId];
-      AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, []);
+  const toggleFavorite = useCallback(
+    (propertyId: string) => {
+      setFavoriteIds((prev) => {
+        const exists = prev.includes(propertyId);
+        const next = exists
+          ? prev.filter((id) => id !== propertyId)
+          : [...prev, propertyId];
+        AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next)).catch(() => {});
+        if (user?.id && isConfigured) {
+          if (exists) removeRemoteFavorite(user.id, propertyId);
+          else addRemoteFavorite(user.id, propertyId);
+        }
+        return next;
+      });
+    },
+    [user?.id, isConfigured]
+  );
 
   const isFavorite = useCallback(
     (propertyId: string) => favoriteIds.includes(propertyId),
@@ -108,57 +136,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(KEYS.onboarding, '1').catch(() => {});
   }, []);
 
-  // Prototype auth: validates shape only and "signs in" locally. Swap for a
-  // real API (Supabase auth, etc.) when the backend is ready.
-  const login = useCallback(async (email: string, _password: string) => {
-    const trimmedEmail = email.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
-      return { ok: false, error: 'Enter a valid email address.' };
-    }
-    if (!_password || _password.length < 4) {
-      return { ok: false, error: 'Enter your password.' };
-    }
-    const nextUser: AuthUser = {
-      id: `user-${trimmedEmail}`,
-      name: trimmedEmail.split('@')[0],
-      email: trimmedEmail,
-    };
-    setUser(nextUser);
-    await AsyncStorage.setItem(KEYS.user, JSON.stringify(nextUser)).catch(() => {});
-    return { ok: true };
-  }, []);
-
-  const signup = useCallback(
-    async (name: string, email: string, _password: string, phone?: string) => {
-      const trimmedName = name.trim();
-      const trimmedEmail = email.trim().toLowerCase();
-      if (trimmedName.length < 2) {
-        return { ok: false, error: 'Enter your full name.' };
-      }
-      if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
-        return { ok: false, error: 'Enter a valid email address.' };
-      }
-      if (!_password || _password.length < 4) {
-        return { ok: false, error: 'Password must be at least 4 characters.' };
-      }
-      const nextUser: AuthUser = {
-        id: `user-${trimmedEmail}`,
-        name: trimmedName,
-        email: trimmedEmail,
-        phone: phone?.trim() || undefined,
-      };
-      setUser(nextUser);
-      await AsyncStorage.setItem(KEYS.user, JSON.stringify(nextUser)).catch(() => {});
-      return { ok: true };
-    },
-    []
-  );
-
-  const logout = useCallback(() => {
-    setUser(null);
-    AsyncStorage.removeItem(KEYS.user).catch(() => {});
-  }, []);
-
   const value = useMemo(
     () => ({
       county,
@@ -173,11 +150,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       onboardingDone,
       completeOnboarding,
       hydrated,
-      user,
+      dataMode: isConfigured ? ('live' as const) : ('mock' as const),
       isAuthenticated: !!user,
-      login,
-      signup,
-      logout,
     }),
     [
       county,
@@ -191,10 +165,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       onboardingDone,
       completeOnboarding,
       hydrated,
+      isConfigured,
       user,
-      login,
-      signup,
-      logout,
     ]
   );
 

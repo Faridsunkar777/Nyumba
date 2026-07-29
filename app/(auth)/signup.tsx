@@ -14,14 +14,14 @@ import { Image } from 'expo-image';
 
 import { AuthTextField } from '@/src/components/AuthTextField';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { useApp } from '@/src/context/AppContext';
+import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing, typography } from '@/src/theme';
 import Logo from '@/assets/images/Nyumba-Logo.png';
 
 export default function SignupScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signup } = useApp();
+  const { signUp, isConfigured } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,13 +32,21 @@ export default function SignupScreen() {
 
   const onSubmit = async () => {
     setError(null);
-    setSubmitting(true);
-    const result = await signup(name, email, password, phone);
-    setSubmitting(false);
-    if (!result.ok) {
-      setError(result.error ?? 'Could not create account.');
+
+    if (!email.trim() || password.length < 6) {
+      setError('Use a valid email and password (6+ characters)');
       return;
     }
+
+    setSubmitting(true);
+    const result = await signUp(email.trim(), password, name.trim());
+    setSubmitting(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
     router.replace('/(tabs)');
   };
 
@@ -63,6 +71,14 @@ export default function SignupScreen() {
         <Text style={styles.subtitle}>
           Save favourites, get faster replies from agencies, and track your requests.
         </Text>
+
+        {!isConfigured && (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>
+              Demo mode — accounts need Supabase configured in `.env`.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.form}>
           <AuthTextField
@@ -92,7 +108,7 @@ export default function SignupScreen() {
           <AuthTextField
             label="Password"
             icon="lock-closed-outline"
-            placeholder="At least 4 characters"
+            placeholder="At least 6 characters"
             value={password}
             onChangeText={setPassword}
             isPassword
@@ -153,6 +169,16 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     marginBottom: spacing.xxl,
+  },
+  banner: {
+    backgroundColor: colors.accentSoft,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  bannerText: {
+    ...typography.caption,
+    color: colors.accent,
   },
   form: {
     marginTop: spacing.sm,

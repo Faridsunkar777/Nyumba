@@ -12,7 +12,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.nyumba.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Nyumba uses your location to show homes near you on the map."
+        "NSLocationWhenInUseUsageDescription": "Nyumba uses your location to show homes near you on the map.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -23,7 +27,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "package": "com.nyumba.app",
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -45,10 +52,17 @@
           "resizeMode": "contain",
           "backgroundColor": "#0B6E4F"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "92bf763c-854a-4000-a48e-b39f4a69fce4"
+      }
     }
   }
 }
