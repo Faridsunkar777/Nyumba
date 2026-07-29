@@ -14,14 +14,14 @@ import { Image } from 'expo-image';
 
 import { AuthTextField } from '@/src/components/AuthTextField';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { useApp } from '@/src/context/AppContext';
+import { useAuth } from '@/src/context/AuthContext';
 import { colors, spacing, typography } from '@/src/theme';
 import Logo from '@/assets/images/Nyumba-Logo.png';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login } = useApp();
+  const { signIn, isConfigured } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,13 +30,21 @@ export default function LoginScreen() {
 
   const onSubmit = async () => {
     setError(null);
-    setSubmitting(true);
-    const result = await login(email, password);
-    setSubmitting(false);
-    if (!result.ok) {
-      setError(result.error ?? 'Could not sign in.');
+
+    if (!email.trim() || password.length < 6) {
+      setError('Enter a valid email and password (6+ characters)');
       return;
     }
+
+    setSubmitting(true);
+    const result = await signIn(email.trim(), password);
+    setSubmitting(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
     router.replace('/(tabs)');
   };
 
@@ -48,7 +56,10 @@ export default function LoginScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xl },
+          {
+            paddingTop: insets.top + spacing.xxl,
+            paddingBottom: insets.bottom + spacing.xl,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
       >
@@ -58,7 +69,17 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to save homes and message agencies faster.</Text>
+        <Text style={styles.subtitle}>
+          Sign in to save homes and message agencies faster.
+        </Text>
+
+        {!isConfigured && (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>
+              Demo mode — accounts need Supabase configured in `.env`.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.form}>
           <AuthTextField
@@ -141,6 +162,16 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     marginBottom: spacing.xxl,
+  },
+  banner: {
+    backgroundColor: colors.accentSoft,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  bannerText: {
+    ...typography.caption,
+    color: colors.accent,
   },
   form: {
     marginTop: spacing.sm,

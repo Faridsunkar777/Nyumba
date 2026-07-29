@@ -32,13 +32,15 @@ function RootNavigator() {
     const inOnboarding = segments[0] === '(onboarding)';
     const inAuth = segments[0] === '(auth)';
 
+    // Force onboarding if not completed
     if (!onboardingDone && !inOnboarding) {
       router.replace('/(onboarding)');
-    } else if (onboardingDone && !isAuthenticated && !inOnboarding && !inAuth) {
-      router.replace('/(auth)');
-    } else if (onboardingDone && isAuthenticated && (inOnboarding || inAuth)) {
+    }
+    // Logged-in users should not stay on auth/onboarding
+    else if (onboardingDone && isAuthenticated && (inOnboarding || inAuth)) {
       router.replace('/(tabs)');
     }
+    // Guests are allowed into the app
   }, [hydrated, onboardingDone, isAuthenticated, segments, router]);
 
   if (!hydrated) {
@@ -92,7 +94,11 @@ function RootNavigator() {
             />
             <Stack.Screen
               name="confirmed"
-              options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+              }}
             />
             <Stack.Screen
               name="filters"
