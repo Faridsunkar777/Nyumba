@@ -81,13 +81,13 @@ export default function ProfileScreen() {
         <View style={styles.authActions}>
           <PrimaryButton
             label="Sign in"
-            onPress={() => router.push('/login' as any)}
+            onPress={() => router.push('/(auth)' as any)}
             fullWidth
           />
           <PrimaryButton
             label="Create account"
             variant="secondary"
-            onPress={() => router.push('/signup' as any)}
+            onPress={() => router.push('/(auth)/signup' as any)}
             fullWidth
           />
         </View>
@@ -101,6 +101,7 @@ export default function ProfileScreen() {
       )}
 
       <Text style={styles.section}>Preferences</Text>
+
       <Pressable style={styles.row} onPress={() => router.push('/county-picker')}>
         <Ionicons name="location-outline" size={22} color={colors.primary} />
         <View style={styles.rowBody}>
@@ -109,6 +110,7 @@ export default function ProfileScreen() {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </Pressable>
+
       <View style={styles.row}>
         <Ionicons name="cash-outline" size={22} color={colors.primary} />
         <View style={styles.rowBody}>
@@ -116,6 +118,7 @@ export default function ProfileScreen() {
           <Text style={styles.rowValue}>KES (Kenyan Shilling)</Text>
         </View>
       </View>
+
       <Pressable style={styles.row} onPress={() => router.push('/(tabs)/favorites')}>
         <Ionicons name="heart-outline" size={22} color={colors.primary} />
         <View style={styles.rowBody}>

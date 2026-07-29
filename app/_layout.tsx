@@ -1,10 +1,11 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
+import { AppSplash } from '@/src/components/AppSplash';
 import { AppProvider, useApp } from '@/src/context/AppContext';
 import { AuthProvider } from '@/src/context/AuthContext';
 import { colors } from '@/src/theme';
@@ -14,9 +15,10 @@ export { ErrorBoundary } from 'expo-router';
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
-  const { hydrated, onboardingDone } = useApp();
+  const { hydrated, onboardingDone, isAuthenticated } = useApp();
   const segments = useSegments();
   const router = useRouter();
+  const [showAppSplash, setShowAppSplash] = useState(true);
 
   useEffect(() => {
     if (hydrated) {
@@ -26,13 +28,18 @@ function RootNavigator() {
 
   useEffect(() => {
     if (!hydrated) return;
+
     const inOnboarding = segments[0] === '(onboarding)';
+    const inAuth = segments[0] === '(auth)';
+
     if (!onboardingDone && !inOnboarding) {
       router.replace('/(onboarding)');
-    } else if (onboardingDone && inOnboarding) {
+    } else if (onboardingDone && !isAuthenticated && !inOnboarding && !inAuth) {
+      router.replace('/(auth)');
+    } else if (onboardingDone && isAuthenticated && (inOnboarding || inAuth)) {
       router.replace('/(tabs)');
     }
-  }, [hydrated, onboardingDone, segments, router]);
+  }, [hydrated, onboardingDone, isAuthenticated, segments, router]);
 
   if (!hydrated) {
     return (
@@ -47,6 +54,10 @@ function RootNavigator() {
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
+  }
+
+  if (showAppSplash) {
+    return <AppSplash onFinish={() => setShowAppSplash(false)} />;
   }
 
   return (
@@ -72,6 +83,18 @@ function RootNavigator() {
               options={{ headerShown: false, animation: 'slide_from_right' }}
             />
             <Stack.Screen
+              name="property/buy/[id]"
+              options={{ headerShown: false, animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="project/[id]"
+              options={{ headerShown: false, animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="confirmed"
+              options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen
               name="filters"
               options={{ presentation: 'modal', headerShown: false }}
             />
@@ -92,9 +115,7 @@ const styles = {
     minHeight: Platform.OS === 'web' ? ('100vh' as unknown as number) : undefined,
     height: Platform.OS === 'web' ? ('100%' as unknown as number) : undefined,
     backgroundColor: colors.background,
-    ...(Platform.OS === 'web'
-      ? ({ alignItems: 'center' as const } as const)
-      : {}),
+    ...(Platform.OS === 'web' ? ({ alignItems: 'center' as const } as const) : {}),
   },
   shell: {
     flex: 1,

@@ -14,39 +14,29 @@ import { Image } from 'expo-image';
 
 import { AuthTextField } from '@/src/components/AuthTextField';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { useAuth } from '@/src/context/AuthContext';
+import { useApp } from '@/src/context/AppContext';
 import { colors, spacing, typography } from '@/src/theme';
 import Logo from '@/assets/images/Nyumba-Logo.png';
 
-export default function SignupScreen() {
+export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signUp, isConfigured } = useAuth();
+  const { login } = useApp();
 
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
-
-    if (!email.trim() || password.length < 6) {
-      setError('Use a valid email and password (6+ characters)');
-      return;
-    }
-
     setSubmitting(true);
-    const result = await signUp(email.trim(), password, name.trim());
+    const result = await login(email, password);
     setSubmitting(false);
-
-    if (result.error) {
-      setError(result.error);
+    if (!result.ok) {
+      setError(result.error ?? 'Could not sign in.');
       return;
     }
-
     router.replace('/(tabs)');
   };
 
@@ -67,28 +57,10 @@ export default function SignupScreen() {
           <Text style={styles.brandName}>Nyumba</Text>
         </View>
 
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>
-          Save favourites, get faster replies from agencies, and track your requests.
-        </Text>
-
-        {!isConfigured && (
-          <View style={styles.banner}>
-            <Text style={styles.bannerText}>
-              Demo mode — accounts need Supabase configured in `.env`.
-            </Text>
-          </View>
-        )}
+        <Text style={styles.title}>Welcome back</Text>
+        <Text style={styles.subtitle}>Sign in to save homes and message agencies faster.</Text>
 
         <View style={styles.form}>
-          <AuthTextField
-            label="Full name"
-            icon="person-outline"
-            placeholder="Jane Wanjiru"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
           <AuthTextField
             label="Email"
             icon="mail-outline"
@@ -98,17 +70,9 @@ export default function SignupScreen() {
             keyboardType="email-address"
           />
           <AuthTextField
-            label="Phone (optional)"
-            icon="call-outline"
-            placeholder="07xx xxx xxx"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
-          <AuthTextField
             label="Password"
             icon="lock-closed-outline"
-            placeholder="At least 6 characters"
+            placeholder="••••••••"
             value={password}
             onChangeText={setPassword}
             isPassword
@@ -122,17 +86,25 @@ export default function SignupScreen() {
           ) : null}
 
           <PrimaryButton
-            label={submitting ? 'Creating account…' : 'Create account'}
+            label={submitting ? 'Signing in…' : 'Sign in'}
             onPress={onSubmit}
+            fullWidth
+            style={{ marginTop: spacing.sm }}
+          />
+
+          <PrimaryButton
+            label="Continue as guest"
+            variant="ghost"
+            onPress={() => router.replace('/(tabs)')}
             fullWidth
             style={{ marginTop: spacing.sm }}
           />
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account?</Text>
-          <Link href="/(auth)" replace>
-            <Text style={styles.footerLink}> Sign in</Text>
+          <Text style={styles.footerText}>Don&apos;t have an account?</Text>
+          <Link href="/(auth)/signup" replace>
+            <Text style={styles.footerLink}> Create one</Text>
           </Link>
         </View>
       </ScrollView>
@@ -169,16 +141,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     marginBottom: spacing.xxl,
-  },
-  banner: {
-    backgroundColor: colors.accentSoft,
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  bannerText: {
-    ...typography.caption,
-    color: colors.accent,
   },
   form: {
     marginTop: spacing.sm,

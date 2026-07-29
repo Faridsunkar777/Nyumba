@@ -103,6 +103,7 @@ export default function PropertyScreen() {
   const requestViewing = async () => {
     if (!agency || !property || requesting) return;
     setRequesting(true);
+
     const message = `Viewing request for "${property.title}" (${priceLabel})`;
     const result = await createLead({
       propertyId: property.id,
@@ -112,19 +113,25 @@ export default function PropertyScreen() {
       phone: profile?.phone || undefined,
       message,
     });
+
     setRequesting(false);
     await safeHapticSuccess();
+
     if (!result.ok) {
       Alert.alert('Could not send request', result.error ?? 'Try WhatsApp instead.');
       return;
     }
-    Alert.alert(
-      'Viewing requested',
-      agency
-        ? `${agency.name} will get your request. You can also WhatsApp them now.`
-        : 'Your request was saved.',
-      [{ text: 'OK' }]
-    );
+
+    // Navigate to the confirmed screen for better UX
+    router.push({
+      pathname: '/confirmed',
+      params: {
+        type: 'viewing',
+        propertyTitle: property.title,
+        agencyName: agency.name,
+        propertyId: property.id,
+      },
+    });
   };
 
   return (
@@ -260,9 +267,20 @@ export default function PropertyScreen() {
           <PrimaryButton
             label={requesting ? 'Sending…' : 'Request viewing'}
             icon="calendar-outline"
+            variant={property.transactionType === 'sale' ? 'secondary' : 'primary'}
             onPress={requestViewing}
             style={{ marginTop: spacing.xl, opacity: requesting ? 0.7 : 1 }}
           />
+
+          {property.transactionType === 'sale' && (
+            <PrimaryButton
+              label="Buy this house"
+              icon="cash-outline"
+              variant="accent"
+              onPress={() => router.push(`/property/buy/${property.id}`)}
+              style={{ marginTop: spacing.sm }}
+            />
+          )}
         </View>
       </ScrollView>
 

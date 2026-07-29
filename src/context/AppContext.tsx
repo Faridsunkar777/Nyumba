@@ -16,7 +16,6 @@ import {
 } from '@/src/data/repositories/favorites';
 import { getDefaultCountyName } from '@/src/data/repositories/locations';
 import { PropertyFilters } from '@/src/data/types';
-
 import { useAuth } from './AuthContext';
 
 const KEYS = {
@@ -39,6 +38,7 @@ type AppContextValue = {
   completeOnboarding: () => void;
   hydrated: boolean;
   dataMode: 'mock' | 'live';
+  isAuthenticated: boolean;
 };
 
 const defaultFilters: PropertyFilters = {
@@ -64,8 +64,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.getItem(KEYS.favorites),
           AsyncStorage.getItem(KEYS.onboarding),
         ]);
+
         if (storedCounty) setCountyState(storedCounty);
         if (storedFavs) setFavoriteIds(JSON.parse(storedFavs));
+
         // Web is a full website — skip mobile onboarding carousel
         if (Platform.OS === 'web') {
           setOnboardingDone(true);
@@ -106,7 +108,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ? prev.filter((id) => id !== propertyId)
           : [...prev, propertyId];
         AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next)).catch(() => {});
-
         if (user?.id && isConfigured) {
           if (exists) removeRemoteFavorite(user.id, propertyId);
           else addRemoteFavorite(user.id, propertyId);
@@ -150,6 +151,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding,
       hydrated,
       dataMode: isConfigured ? ('live' as const) : ('mock' as const),
+      isAuthenticated: !!user,
     }),
     [
       county,
@@ -164,6 +166,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding,
       hydrated,
       isConfigured,
+      user,
     ]
   );
 

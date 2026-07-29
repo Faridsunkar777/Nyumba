@@ -30,6 +30,14 @@ export type Amenity =
   | 'Garden'
   | 'Staff quarters';
 
+export interface BankAccount {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  branch: string;
+  paybill?: string;
+}
+
 export interface Agency {
   id: string;
   name: string;
@@ -48,6 +56,21 @@ export interface Agency {
   yearsActive: number;
   responseRate: number;
   featured?: boolean;
+  bankAccount?: BankAccount;
+}
+
+export interface UpcomingProject {
+  id: string;
+  agencyId: string;
+  name: string;
+  description: string;
+  county: string;
+  estate: string;
+  imageUrl: string;
+  priceFromKes: number;
+  completionLabel: string;
+  unitsLeft?: number;
+  propertyType: PropertyType;
 }
 
 export interface Property {
@@ -96,6 +119,13 @@ export interface PropertyFilters {
   amenities?: Amenity[];
   agencyId?: string;
   featuredOnly?: boolean;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
 }
 
 export interface AgencyFilters {
