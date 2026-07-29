@@ -7,9 +7,17 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 
+import {
+  addRemoteFavorite,
+  fetchRemoteFavoriteIds,
+  removeRemoteFavorite,
+} from '@/src/data/repositories/favorites';
 import { getDefaultCountyName } from '@/src/data/repositories/locations';
 import { PropertyFilters } from '@/src/data/types';
+
+import { useAuth } from './AuthContext';
 
 const KEYS = {
   county: '@nyumba/county',
@@ -30,6 +38,7 @@ type AppContextValue = {
   onboardingDone: boolean;
   completeOnboarding: () => void;
   hydrated: boolean;
+  dataMode: 'mock' | 'live';
 };
 
 const defaultFilters: PropertyFilters = {
@@ -40,6 +49,7 @@ const defaultFilters: PropertyFilters = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { user, isConfigured } = useAuth();
   const [county, setCountyState] = useState(getDefaultCountyName());
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [filters, setFilters] = useState<PropertyFilters>(defaultFilters);
@@ -56,30 +66,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ]);
         if (storedCounty) setCountyState(storedCounty);
         if (storedFavs) setFavoriteIds(JSON.parse(storedFavs));
-        if (storedOnboarding === null) setOnboardingDone(false);
-        else setOnboardingDone(storedOnboarding === '1');
+        // Web is a full website — skip mobile onboarding carousel
+        if (Platform.OS === 'web') {
+          setOnboardingDone(true);
+        } else if (storedOnboarding === null) {
+          setOnboardingDone(false);
+        } else {
+          setOnboardingDone(storedOnboarding === '1');
+        }
       } catch {
-        // ignore storage errors in prototype
+        // ignore
       } finally {
         setHydrated(true);
       }
     })();
   }, []);
 
+  // Sync favorites from cloud when logged in
+  useEffect(() => {
+    if (!user?.id || !isConfigured) return;
+    fetchRemoteFavoriteIds(user.id).then((ids) => {
+      if (ids.length) {
+        setFavoriteIds(ids);
+        AsyncStorage.setItem(KEYS.favorites, JSON.stringify(ids)).catch(() => {});
+      }
+    });
+  }, [user?.id, isConfigured]);
+
   const setCounty = useCallback((value: string) => {
     setCountyState(value);
     AsyncStorage.setItem(KEYS.county, value).catch(() => {});
   }, []);
 
-  const toggleFavorite = useCallback((propertyId: string) => {
-    setFavoriteIds((prev) => {
-      const next = prev.includes(propertyId)
-        ? prev.filter((id) => id !== propertyId)
-        : [...prev, propertyId];
-      AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, []);
+  const toggleFavorite = useCallback(
+    (propertyId: string) => {
+      setFavoriteIds((prev) => {
+        const exists = prev.includes(propertyId);
+        const next = exists
+          ? prev.filter((id) => id !== propertyId)
+          : [...prev, propertyId];
+        AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next)).catch(() => {});
+
+        if (user?.id && isConfigured) {
+          if (exists) removeRemoteFavorite(user.id, propertyId);
+          else addRemoteFavorite(user.id, propertyId);
+        }
+        return next;
+      });
+    },
+    [user?.id, isConfigured]
+  );
 
   const isFavorite = useCallback(
     (propertyId: string) => favoriteIds.includes(propertyId),
@@ -113,6 +149,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       onboardingDone,
       completeOnboarding,
       hydrated,
+      dataMode: isConfigured ? ('live' as const) : ('mock' as const),
     }),
     [
       county,
@@ -126,6 +163,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       onboardingDone,
       completeOnboarding,
       hydrated,
+      isConfigured,
     ]
   );
 
