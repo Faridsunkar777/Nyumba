@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   FlatList,
   NativeScrollEvent,
@@ -90,13 +89,15 @@ export default function PropertyScreen() {
 
   const requestViewing = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert(
-      'Viewing requested',
-      agency
-        ? `${agency.name} will contact you shortly (demo). You can also WhatsApp them now.`
-        : 'Your request was noted (demo).',
-      [{ text: 'OK' }]
-    );
+    router.push({
+      pathname: '/confirmed',
+      params: {
+        type: 'viewing',
+        propertyTitle: property.title,
+        agencyName: agency?.name ?? '',
+        propertyId: property.id,
+      },
+    });
   };
 
   return (
@@ -232,9 +233,19 @@ export default function PropertyScreen() {
           <PrimaryButton
             label="Request viewing"
             icon="calendar-outline"
+            variant={property.transactionType === 'sale' ? 'secondary' : 'primary'}
             onPress={requestViewing}
             style={{ marginTop: spacing.xl }}
           />
+          {property.transactionType === 'sale' && (
+            <PrimaryButton
+              label="Buy this house"
+              icon="cash-outline"
+              variant="accent"
+              onPress={() => router.push(`/property/buy/${property.id}`)}
+              style={{ marginTop: spacing.sm }}
+            />
+          )}
         </View>
       </ScrollView>
 

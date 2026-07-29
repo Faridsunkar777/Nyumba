@@ -10,7 +10,30 @@ import { colors, radius, shadows, spacing, typography } from '@/src/theme';
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { county, favoriteIds } = useApp();
+  const { county, favoriteIds, user, logout } = useApp();
+
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : 'YK';
+
+  const confirmLogout = () => {
+    Alert.alert('Log out?', 'You can sign back in anytime.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log out',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/(auth)');
+        },
+      },
+    ]);
+  };
 
   const resetDemo = () => {
     Alert.alert('Reset demo data?', 'This clears favorites, county, and onboarding.', [
@@ -38,11 +61,11 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>YK</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>You (Demo)</Text>
-          <Text style={styles.meta}>House hunter in Kenya</Text>
+          <Text style={styles.name}>{user?.name ?? 'You (Guest)'}</Text>
+          <Text style={styles.meta}>{user?.email ?? 'House hunter in Kenya'}</Text>
         </View>
       </View>
 
@@ -86,6 +109,12 @@ export default function ProfileScreen() {
       <Pressable style={styles.reset} onPress={resetDemo}>
         <Text style={styles.resetText}>Reset demo data</Text>
       </Pressable>
+
+      {user && (
+        <Pressable style={styles.reset} onPress={confirmLogout}>
+          <Text style={styles.logoutText}>Log out</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -187,5 +216,9 @@ const styles = StyleSheet.create({
   resetText: {
     ...typography.bodyBold,
     color: colors.error,
+  },
+  logoutText: {
+    ...typography.bodyBold,
+    color: colors.textSecondary,
   },
 });

@@ -37,6 +37,13 @@ export const agencies: Agency[] = [
     yearsActive: 12,
     responseRate: 96,
     featured: true,
+    bankAccount: {
+      bankName: 'Equity Bank',
+      accountName: 'Safari Homes Kenya Ltd',
+      accountNumber: '0450291837462',
+      branch: 'Westlands',
+      paybill: '247247',
+    },
   },
   {
     id: 'agency-2',
@@ -56,6 +63,13 @@ export const agencies: Agency[] = [
     yearsActive: 9,
     responseRate: 94,
     featured: true,
+    bankAccount: {
+      bankName: 'KCB Bank',
+      accountName: 'Coastline Realty Ltd',
+      accountNumber: '1129384756201',
+      branch: 'Nyali',
+      paybill: '522522',
+    },
   },
   {
     id: 'agency-3',
@@ -75,6 +89,13 @@ export const agencies: Agency[] = [
     yearsActive: 7,
     responseRate: 91,
     featured: true,
+    bankAccount: {
+      bankName: 'Cooperative Bank',
+      accountName: 'Greenfields Properties Ltd',
+      accountNumber: '0119237465810',
+      branch: 'Ruiru',
+      paybill: '400200',
+    },
   },
   {
     id: 'agency-4',
@@ -94,6 +115,13 @@ export const agencies: Agency[] = [
     yearsActive: 15,
     responseRate: 98,
     featured: true,
+    bankAccount: {
+      bankName: 'Standard Chartered',
+      accountName: 'Summit Estates Ltd',
+      accountNumber: '8801122334455',
+      branch: 'Karen',
+      paybill: '329329',
+    },
   },
   {
     id: 'agency-5',
@@ -112,6 +140,13 @@ export const agencies: Agency[] = [
     counties: ['Kisumu'],
     yearsActive: 6,
     responseRate: 89,
+    bankAccount: {
+      bankName: 'NCBA Bank',
+      accountName: 'Lakeside Homes Ltd',
+      accountNumber: '3344556677889',
+      branch: 'Kisumu Central',
+      paybill: '880100',
+    },
   },
   {
     id: 'agency-6',
@@ -130,6 +165,13 @@ export const agencies: Agency[] = [
     counties: ['Nakuru'],
     yearsActive: 4,
     responseRate: 85,
+    bankAccount: {
+      bankName: 'ABSA Bank',
+      accountName: 'Rift Valley Realty Ltd',
+      accountNumber: '2093847561029',
+      branch: 'Nakuru Town',
+      paybill: '303030',
+    },
   },
   {
     id: 'agency-7',
@@ -149,6 +191,13 @@ export const agencies: Agency[] = [
     yearsActive: 5,
     responseRate: 93,
     featured: true,
+    bankAccount: {
+      bankName: 'Equity Bank',
+      accountName: 'Urban Nest Agency Ltd',
+      accountNumber: '0450998877665',
+      branch: 'CBD',
+      paybill: '247247',
+    },
   },
   {
     id: 'agency-8',
@@ -167,6 +216,13 @@ export const agencies: Agency[] = [
     counties: ['Kajiado', 'Nairobi', 'Kiambu', 'Machakos'],
     yearsActive: 11,
     responseRate: 90,
+    bankAccount: {
+      bankName: 'DTB Bank',
+      accountName: 'Horizon Land & Homes Ltd',
+      accountNumber: '0102938475610',
+      branch: 'Kitengela',
+      paybill: '516600',
+    },
   },
   {
     id: 'agency-9',
@@ -185,6 +241,13 @@ export const agencies: Agency[] = [
     counties: ['Mombasa'],
     yearsActive: 8,
     responseRate: 92,
+    bankAccount: {
+      bankName: 'I&M Bank',
+      accountName: 'Palm Grove Realty Ltd',
+      accountNumber: '0011223344556',
+      branch: 'Nyali',
+      paybill: '542542',
+    },
   },
   {
     id: 'agency-10',
@@ -204,5 +267,12 @@ export const agencies: Agency[] = [
     yearsActive: 6,
     responseRate: 95,
     featured: true,
+    bankAccount: {
+      bankName: 'NCBA Bank',
+      accountName: 'MetroKeys Properties Ltd',
+      accountNumber: '3300112244558',
+      branch: 'Westlands',
+      paybill: '880100',
+    },
   },
 ];

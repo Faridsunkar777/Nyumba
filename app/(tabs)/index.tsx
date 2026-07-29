@@ -15,19 +15,21 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { AgencyCard } from '@/src/components/AgencyCard';
 import { Chip } from '@/src/components/Chip';
+import { ProjectCard } from '@/src/components/ProjectCard';
 import { PropertyCard } from '@/src/components/PropertyCard';
 import { SearchBar } from '@/src/components/SearchBar';
 import { SectionHeader } from '@/src/components/SectionHeader';
+import { TransactionToggle } from '@/src/components/TransactionToggle';
 import { useApp } from '@/src/context/AppContext';
 import { getAgencies, getFeaturedAgencies } from '@/src/data/repositories/agencies';
 import { getFeaturedProperties } from '@/src/data/repositories/properties';
-import { Agency, Property, PropertyType, TransactionType } from '@/src/data/types';
+import { getUpcomingProjects } from '@/src/data/repositories/projects';
+import { Agency, Property, PropertyType, TransactionType, UpcomingProject } from '@/src/data/types';
 import { colors, spacing, typography } from '@/src/theme';
 import Logo from '@/assets/images/Nyumba-Logo.png';
 
-const quickChips: { label: string; transactionType?: TransactionType; propertyType?: PropertyType }[] = [
-  { label: 'For Rent', transactionType: 'rent' },
-  { label: 'For Sale', transactionType: 'sale' },
+const quickChips: { label: string; propertyType?: PropertyType }[] = [
+  { label: 'All types' },
   { label: 'Apartments', propertyType: 'apartment' },
   { label: 'Houses', propertyType: 'house' },
   { label: 'Bedsitters', propertyType: 'bedsitter' },
@@ -37,29 +39,30 @@ const quickChips: { label: string; transactionType?: TransactionType; propertyTy
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { county, filters, setFilters, updateFilters } = useApp();
+  const { county, filters, updateFilters } = useApp();
 
   const [featuredAgencies, setFeaturedAgencies] = useState<Agency[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [projects, setProjects] = useState<UpcomingProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const activeChip = quickChips.findIndex(
-    (chip) =>
-      (chip.transactionType ?? 'all') === (filters.transactionType ?? 'all') &&
-      (chip.propertyType ?? 'all') === (filters.propertyType ?? 'all')
+    (chip) => (chip.propertyType ?? 'all') === (filters.propertyType ?? 'all')
   );
 
   const load = useCallback(async () => {
-    const [featuredA, allA, featuredP] = await Promise.all([
+    const [featuredA, allA, featuredP, upcoming] = await Promise.all([
       getFeaturedAgencies(county),
       getAgencies({ county }),
       getFeaturedProperties(county),
+      getUpcomingProjects(county),
     ]);
     setFeaturedAgencies(featuredA);
     setAgencies(allA);
     setFeaturedProperties(featuredP);
+    setProjects(upcoming);
   }, [county]);
 
   useEffect(() => {
@@ -75,10 +78,12 @@ export default function DiscoverScreen() {
 
   const onChipPress = (index: number) => {
     const chip = quickChips[index];
-    setFilters({
-      transactionType: chip.transactionType ?? 'all',
-      propertyType: chip.propertyType ?? 'all',
-    });
+    updateFilters({ propertyType: chip.propertyType ?? 'all' });
+    router.push('/(tabs)/search');
+  };
+
+  const onTransactionChange = (value: TransactionType | 'all') => {
+    updateFilters({ transactionType: value });
     router.push('/(tabs)/search');
   };
 
@@ -114,6 +119,33 @@ export default function DiscoverScreen() {
         </View>
 
         <SearchBar onPress={() => router.push('/(tabs)/search')} />
+
+        {!loading && projects.length > 0 && (
+          <>
+            <SectionHeader title="Upcoming projects" />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalList}
+              contentContainerStyle={styles.horizontalListContent}
+            >
+              {projects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onPress={() => router.push(`/project/${project.id}`)}
+                />
+              ))}
+            </ScrollView>
+          </>
+        )}
+
+        <View style={styles.transactionBar}>
+          <TransactionToggle
+            value={filters.transactionType ?? 'all'}
+            onChange={onTransactionChange}
+          />
+        </View>
 
         <ScrollView
           horizontal
@@ -250,6 +282,9 @@ const styles = StyleSheet.create({
   locationText: {
     ...typography.bodyBold,
     color: colors.primary,
+  },
+  transactionBar: {
+    marginTop: spacing.lg,
   },
   chips: {
     marginVertical: spacing.lg,
