@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,7 +12,6 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-// ScrollView used for page + WebFooter
 import { Ionicons } from '@expo/vector-icons';
 
 import { EmptyState } from '@/src/components/EmptyState';
@@ -31,7 +31,7 @@ export default function WebPropertyPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const wide = width >= 900;
+  const wide = width >= 960;
   const { isFavorite, toggleFavorite } = useApp();
   const { user, profile } = useAuth();
 
@@ -80,6 +80,8 @@ export default function WebPropertyPage() {
       ? `${formatKesFull(property.priceKes)} / month`
       : formatKesFull(property.priceKes);
 
+  const hasCoords = property.lat != null && property.lng != null;
+
   const requestViewing = async () => {
     if (!agency || requesting) return;
     setRequesting(true);
@@ -99,6 +101,10 @@ export default function WebPropertyPage() {
     Alert.alert('Viewing requested', `${agency.name} will get your request.`);
   };
 
+  const mapEmbedUrl = hasCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${property.lng! - 0.012}%2C${property.lat! - 0.008}%2C${property.lng! + 0.012}%2C${property.lat! + 0.008}&layer=mapnik&marker=${property.lat}%2C${property.lng}`
+    : null;
+
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <Pressable style={styles.back} onPress={() => router.back()}>
@@ -106,14 +112,21 @@ export default function WebPropertyPage() {
         <Text style={styles.backText}>Back</Text>
       </Pressable>
 
-      <View style={[styles.layout, !wide && { flexDirection: 'column' }]}>
-        <View style={[styles.gallery, wide && { flex: 1.2 }]}>
+      <View style={[styles.layout, !wide && styles.layoutStack]}>
+        {/* LEFT: Gallery + Map */}
+        <View style={[styles.leftCol, wide && { flex: 1.15 }]}>
           <Image
             source={{ uri: property.images[activeImg] || property.images[0] }}
             style={styles.mainImage}
             contentFit="cover"
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbs}>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.thumbs}
+            contentContainerStyle={{ gap: 8 }}
+          >
             {property.images.map((img, i) => (
               <Pressable key={i} onPress={() => setActiveImg(i)}>
                 <Image
@@ -124,8 +137,61 @@ export default function WebPropertyPage() {
               </Pressable>
             ))}
           </ScrollView>
+
+          {/* Location map — fills the previous whitespace */}
+          <View style={styles.mapCard}>
+            <View style={styles.mapHeader}>
+              <Ionicons name="location" size={16} color={colors.primary} />
+              <Text style={styles.mapTitle}>Location</Text>
+              <Text style={styles.mapSub} numberOfLines={1}>
+                {property.estate}, {property.city}
+              </Text>
+            </View>
+
+            {mapEmbedUrl && Platform.OS === 'web' ? (
+              // @ts-expect-error web-only iframe
+              <iframe
+                title="Property location"
+                src={mapEmbedUrl}
+                style={{
+                  width: '100%',
+                  height: 240,
+                  border: 0,
+                  borderRadius: 16,
+                  display: 'block',
+                }}
+              />
+            ) : (
+              <View style={styles.mapFallback}>
+                <Ionicons name="map-outline" size={28} color={colors.textMuted} />
+                <Text style={styles.mapFallbackText}>
+                  {hasCoords
+                    ? `${property.lat!.toFixed(4)}, ${property.lng!.toFixed(4)}`
+                    : 'Location coordinates not available'}
+                </Text>
+              </View>
+            )}
+
+            {hasCoords && (
+              <Pressable
+                style={styles.mapLink}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    window.open(
+                      `https://www.openstreetmap.org/?mlat=${property.lat}&mlon=${property.lng}#map=16/${property.lat}/${property.lng}`,
+                      '_blank'
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.mapLinkText}>Open in maps</Text>
+                <Ionicons name="open-outline" size={14} color={colors.primary} />
+              </Pressable>
+            )}
+          </View>
         </View>
 
+        {/* RIGHT: Details + CTAs */}
         <View style={[styles.panel, wide && { flex: 1 }]}>
           <View style={styles.badges}>
             <View style={styles.badge}>
@@ -193,53 +259,69 @@ export default function WebPropertyPage() {
             </Pressable>
           )}
 
-          <View style={styles.actions}>
+          {/* Actions */}
+          <View style={styles.actionsRow}>
             <PrimaryButton
               label={fav ? 'Saved' : 'Save'}
               icon={fav ? 'heart' : 'heart-outline'}
               variant="secondary"
               onPress={() => toggleFavorite(property.id)}
-              fullWidth
+              style={{ flex: 1 }}
             />
             <PrimaryButton
               label="Share"
               icon="share-outline"
               variant="ghost"
               onPress={() => shareProperty(property.title, property.estate, priceLabel)}
-              fullWidth
+              style={{ flex: 1 }}
             />
           </View>
+
           <PrimaryButton
             label={requesting ? 'Sending…' : 'Request viewing'}
             icon="calendar-outline"
             onPress={requestViewing}
-            style={{ marginTop: spacing.sm }}
+            fullWidth
+            style={{ marginTop: spacing.sm, opacity: requesting ? 0.7 : 1 }}
           />
+
+          {property.transactionType === 'sale' && (
+            <PrimaryButton
+              label="Buy this house"
+              icon="cash-outline"
+              variant="accent"
+              onPress={() => router.push(`/property/buy/${property.id}` as any)}
+              fullWidth
+              style={{ marginTop: spacing.sm }}
+            />
+          )}
+
           {agency && (
-            <View style={styles.actions}>
+            <View style={styles.contactRow}>
               <PrimaryButton
                 label="Call"
                 icon="call"
                 variant="secondary"
-                fullWidth
                 onPress={() => openPhone(agency.phone)}
+                style={{ flex: 1 }}
               />
               <PrimaryButton
                 label="WhatsApp"
                 icon="logo-whatsapp"
                 variant="accent"
-                fullWidth
                 onPress={() =>
                   openWhatsApp(
                     agency.whatsapp,
                     `Hi, I'm interested in "${property.title}" (${priceLabel}) on Nyumba.`
                   )
                 }
+                style={{ flex: 1 }}
               />
             </View>
           )}
         </View>
       </View>
+
       <WebFooter />
     </ScrollView>
   );
@@ -254,7 +336,7 @@ function Fact({
 }) {
   return (
     <View style={styles.fact}>
-      <Ionicons name={icon} size={18} color={colors.primary} />
+      <Ionicons name={icon} size={16} color={colors.primary} />
       <Text style={styles.factText}>{label}</Text>
     </View>
   );
@@ -266,7 +348,8 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
     paddingBottom: 0,
     flexGrow: 1,
   },
@@ -287,23 +370,55 @@ const styles = StyleSheet.create({
   },
   backText: { ...typography.bodyBold, color: colors.primary },
   layout: { flexDirection: 'row', gap: spacing.xxl, alignItems: 'flex-start' },
-  gallery: { minWidth: 280 },
+  layoutStack: { flexDirection: 'column' },
+  leftCol: { minWidth: 280, gap: spacing.md },
   mainImage: {
     width: '100%',
-    height: 420,
+    height: 400,
     borderRadius: 24,
     backgroundColor: colors.chip,
   },
-  thumbs: { marginTop: spacing.md },
+  thumbs: { marginTop: 4 },
   thumb: {
     width: 88,
     height: 64,
     borderRadius: 10,
-    marginRight: 8,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   thumbActive: { borderColor: colors.primary },
+  mapCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  mapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mapTitle: { ...typography.bodyBold, color: colors.text },
+  mapSub: { ...typography.caption, color: colors.textSecondary, flex: 1 },
+  mapFallback: {
+    height: 180,
+    borderRadius: 16,
+    backgroundColor: colors.chip,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  mapFallbackText: { ...typography.caption, color: colors.textMuted },
+  mapLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-end',
+    paddingVertical: 4,
+  },
+  mapLinkText: { ...typography.captionBold, color: colors.primary },
   panel: {
     backgroundColor: colors.surface,
     borderRadius: 24,
@@ -324,7 +439,7 @@ const styles = StyleSheet.create({
   badgeText: { ...typography.captionBold, color: colors.primary },
   price: { fontSize: 32, fontWeight: '800', color: colors.accent, marginTop: 4 },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
     color: colors.text,
     marginTop: 6,
@@ -372,5 +487,6 @@ const styles = StyleSheet.create({
   agencyLogo: { width: 48, height: 48, borderRadius: 12 },
   agencyName: { ...typography.bodyBold, color: colors.text },
   agencyMeta: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
-  actions: { flexDirection: 'row', gap: 8, marginTop: spacing.md },
+  actionsRow: { flexDirection: 'row', gap: 8, marginTop: spacing.xl },
+  contactRow: { flexDirection: 'row', gap: 8, marginTop: spacing.sm },
 });

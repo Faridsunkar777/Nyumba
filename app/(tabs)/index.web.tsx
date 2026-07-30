@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -26,7 +26,11 @@ import { WebPropertyCard } from '@/src/web/WebPropertyCard';
 const HERO_IMG =
   'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&h=900&fit=crop';
 
-const chips: { label: string; transactionType?: TransactionType; propertyType?: PropertyType }[] = [
+const chips: {
+  label: string;
+  transactionType?: TransactionType;
+  propertyType?: PropertyType;
+}[] = [
   { label: 'For Rent', transactionType: 'rent' },
   { label: 'For Sale', transactionType: 'sale' },
   { label: 'Apartments', propertyType: 'apartment' },
@@ -35,10 +39,50 @@ const chips: { label: string; transactionType?: TransactionType; propertyType?: 
   { label: 'Land', propertyType: 'land' },
 ];
 
+/** Enhanced breakpoints tuned specifically for Phone, iPad / Air / Pro, and Large Desktop */
+function useLayout(width: number) {
+  const isPhone = width < 768;
+  const isTablet = width >= 768 && width < 1280; // Handles iPad mini, iPad Air, & iPad Pro (Portrait/Landscape)
+  const isDesktop = width >= 1280;
+
+  // 3 columns for iPad Pro / large tablets and desktop; 2 for standard portrait tablets; 1 for phones
+  const cols = width >= 960 ? 3 : isTablet ? 2 : 1;
+  const pad = isPhone ? 16 : isTablet ? 32 : 40;
+  const sectionGap = isPhone ? 28 : isTablet ? 36 : 48;
+  const maxContent = Math.min(width, 1200);
+
+  const heroTitleSize = isPhone ? 28 : isTablet ? 40 : 48;
+  const heroTitleLine = isPhone ? 34 : isTablet ? 48 : 54;
+  const heroSubSize = isPhone ? 15 : isTablet ? 17 : 18;
+  const sectionTitleSize = isPhone ? 22 : isTablet ? 28 : 32;
+
+  return {
+    isPhone,
+    isTablet,
+    isDesktop,
+    cols,
+    pad,
+    sectionGap,
+    maxContent,
+    heroTitleSize,
+    heroTitleLine,
+    heroSubSize,
+    sectionTitleSize,
+  };
+}
+
+function gridWidth(screenW: number, cols: number, pad: number) {
+  const gap = 20;
+  const max = Math.min(screenW, 1200) - pad * 2;
+  return (max - gap * (cols - 1)) / cols;
+}
+
 export default function WebHomePage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const layout = useLayout(width);
   const { county, setFilters } = useApp();
+
   const [query, setQuery] = useState('');
   const [featuredAgencies, setFeaturedAgencies] = useState<Agency[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -46,7 +90,10 @@ export default function WebHomePage() {
   const [recentProperties, setRecentProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const cols = width >= 1100 ? 3 : width >= 720 ? 2 : 1;
+  const cardW = useMemo(
+    () => gridWidth(width, layout.cols, layout.pad),
+    [width, layout.cols, layout.pad]
+  );
 
   const load = useCallback(async () => {
     const [fa, all, fp, recent] = await Promise.all([
@@ -66,7 +113,10 @@ export default function WebHomePage() {
     load().finally(() => setLoading(false));
   }, [load]);
 
-  const goSearch = (extra?: { transactionType?: TransactionType; propertyType?: PropertyType }) => {
+  const goSearch = (extra?: {
+    transactionType?: TransactionType;
+    propertyType?: PropertyType;
+  }) => {
     setFilters({
       transactionType: extra?.transactionType ?? 'all',
       propertyType: extra?.propertyType ?? 'all',
@@ -77,38 +127,88 @@ export default function WebHomePage() {
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
-      {/* HERO */}
-      <View style={styles.hero}>
+      {/* ── HERO ───────────────────────────────────────── */}
+      <View
+        style={[
+          styles.hero,
+          {
+            minHeight: layout.isPhone ? 480 : layout.isTablet ? 540 : 560,
+            paddingVertical: layout.isPhone ? 40 : 64,
+          },
+        ]}
+      >
         <Image source={{ uri: HERO_IMG }} style={styles.heroBg} contentFit="cover" />
         <LinearGradient
           colors={['rgba(10,47,36,0.75)', 'rgba(10,47,36,0.55)', 'rgba(10,47,36,0.85)']}
           style={styles.heroBg}
         />
-        <View style={styles.heroInner}>
+
+        <View style={[styles.heroInner, { paddingHorizontal: layout.pad }]}>
           <View style={styles.heroBadge}>
             <Text style={styles.heroBadgeText}>Kenya’s agency-first house hunt</Text>
           </View>
-          <Text style={styles.heroTitle}>Find your next home{'\n'}with agencies you trust</Text>
-          <Text style={styles.heroSub}>
+
+          <Text
+            style={[
+              styles.heroTitle,
+              {
+                fontSize: layout.heroTitleSize,
+                lineHeight: layout.heroTitleLine,
+              },
+            ]}
+          >
+            Find your next home{'\n'}with agencies you trust
+          </Text>
+
+          <Text
+            style={[
+              styles.heroSub,
+              {
+                fontSize: layout.heroSubSize,
+                lineHeight: layout.heroSubSize + 8,
+                marginBottom: layout.isPhone ? 24 : 36,
+              },
+            ]}
+          >
             Browse real estate companies like storefronts — rentals, sales, and land across{' '}
             {county} and beyond. Call or WhatsApp in one click.
           </Text>
 
-          <View style={styles.searchCard}>
-            <View style={styles.searchRow}>
-              <Ionicons name="search" size={20} color={colors.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search estates, neighbourhoods, or keywords…"
-                placeholderTextColor={colors.textMuted}
-                value={query}
-                onChangeText={setQuery}
-                onSubmitEditing={() => goSearch()}
-              />
-              <Pressable style={styles.searchBtn} onPress={() => goSearch()}>
+          {/* Search card */}
+          <View
+            style={[
+              styles.searchCard,
+              {
+                maxWidth: layout.isPhone ? '100%' : 720,
+                padding: layout.isPhone ? 14 : 20,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.searchRow,
+                layout.isPhone && { flexDirection: 'column', alignItems: 'stretch', gap: 10 },
+              ]}
+            >
+              <View style={styles.searchInputWrap}>
+                <Ionicons name="search" size={20} color={colors.textMuted} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search estates, neighbourhoods…"
+                  placeholderTextColor={colors.textMuted}
+                  value={query}
+                  onChangeText={setQuery}
+                  onSubmitEditing={() => goSearch()}
+                />
+              </View>
+              <Pressable
+                style={[styles.searchBtn, layout.isPhone && { alignSelf: 'stretch' }]}
+                onPress={() => goSearch()}
+              >
                 <Text style={styles.searchBtnText}>Search</Text>
               </Pressable>
             </View>
+
             <View style={styles.chipRow}>
               {chips.map((c) => (
                 <Pressable
@@ -127,11 +227,20 @@ export default function WebHomePage() {
             </View>
           </View>
 
-          <View style={styles.statsRow}>
+          {/* Stats */}
+          <View
+            style={[
+              styles.statsRow,
+              {
+                marginTop: layout.isPhone ? 28 : 40,
+                gap: layout.isPhone ? 20 : 40,
+              },
+            ]}
+          >
             <Stat value={`${agencies.length}+`} label="Agencies" />
             <Stat value={`${recentProperties.length}+`} label="Listings near you" />
-            <Stat value="KES" label="Local pricing" />
-            <Stat value="24/7" label="Browse anytime" />
+            {!layout.isPhone && <Stat value="KES" label="Local pricing" />}
+            {!layout.isPhone && <Stat value="24/7" label="Browse anytime" />}
           </View>
         </View>
       </View>
@@ -140,15 +249,18 @@ export default function WebHomePage() {
         <ActivityIndicator style={{ marginVertical: 60 }} color={colors.primary} size="large" />
       ) : (
         <>
+          {/* Featured agencies */}
           <Section
             title="Featured agencies"
             subtitle={`Top-rated partners serving ${county}`}
             action="View all"
             onAction={() => router.push('/search' as any)}
+            pad={layout.pad}
+            titleSize={layout.sectionTitleSize}
           >
-            <View style={[styles.grid, { gap: 20 }]}>
-              {featuredAgencies.slice(0, cols * 2).map((a) => (
-                <View key={a.id} style={{ width: gridWidth(width, cols), maxWidth: '100%' }}>
+            <View style={styles.grid}>
+              {featuredAgencies.slice(0, layout.cols * 2).map((a) => (
+                <View key={a.id} style={{ width: cardW, maxWidth: '100%' }}>
                   <WebAgencyCard
                     agency={a}
                     onPress={() => router.push(`/agency/${a.id}` as any)}
@@ -158,15 +270,18 @@ export default function WebHomePage() {
             </View>
           </Section>
 
+          {/* Featured homes */}
           <Section
             title="Homes you’ll love"
             subtitle="Hand-picked featured listings"
             action="See all homes"
             onAction={() => goSearch()}
+            pad={layout.pad}
+            titleSize={layout.sectionTitleSize}
           >
             <View style={styles.grid}>
-              {featuredProperties.slice(0, cols * 2).map((p) => (
-                <View key={p.id} style={{ width: gridWidth(width, cols) }}>
+              {featuredProperties.slice(0, layout.cols * 2).map((p) => (
+                <View key={p.id} style={{ width: cardW, maxWidth: '100%' }}>
                   <WebPropertyCard
                     property={p}
                     onPress={() => router.push(`/property/${p.id}` as any)}
@@ -177,8 +292,23 @@ export default function WebHomePage() {
           </Section>
 
           {/* How it works */}
-          <View style={styles.howBand}>
-            <Text style={styles.howTitle}>How Nyumba works</Text>
+          <View
+            style={[
+              styles.howBand,
+              {
+                paddingHorizontal: layout.pad,
+                paddingVertical: layout.isPhone ? 40 : 56,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.howTitle,
+                { fontSize: layout.sectionTitleSize, marginBottom: layout.isPhone ? 24 : 36 },
+              ]}
+            >
+              How Nyumba works
+            </Text>
             <View style={styles.howGrid}>
               <HowCard
                 step="01"
@@ -201,13 +331,16 @@ export default function WebHomePage() {
             </View>
           </View>
 
+          {/* All agencies */}
           <Section
             title={`Agencies in ${county}`}
             subtitle="Open a storefront to see their full catalogue"
+            pad={layout.pad}
+            titleSize={layout.sectionTitleSize}
           >
             <View style={styles.grid}>
               {agencies.map((a) => (
-                <View key={a.id} style={{ width: gridWidth(width, cols) }}>
+                <View key={a.id} style={{ width: cardW, maxWidth: '100%' }}>
                   <WebAgencyCard
                     agency={a}
                     onPress={() => router.push(`/agency/${a.id}` as any)}
@@ -217,23 +350,52 @@ export default function WebHomePage() {
             </View>
           </Section>
 
-          {/* CTA band */}
-          <View style={styles.ctaBand}>
+          {/* CTA */}
+          <View
+            style={[
+              styles.ctaBand,
+              {
+                paddingHorizontal: layout.pad,
+                paddingBottom: layout.isPhone ? 40 : 56,
+              },
+            ]}
+          >
             <LinearGradient
               colors={[colors.primary, colors.primaryDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.ctaGradient}
+              style={[
+                styles.ctaGradient,
+                { padding: layout.isPhone ? 28 : layout.isTablet ? 36 : 48 },
+              ]}
             >
-              <Text style={styles.ctaTitle}>Ready to find your dream home?</Text>
+              <Text
+                style={[
+                  styles.ctaTitle,
+                  { fontSize: layout.isPhone ? 22 : layout.isTablet ? 26 : 28 },
+                ]}
+              >
+                Ready to find your dream home?
+              </Text>
               <Text style={styles.ctaSub}>
                 Create a free account to sync saved homes across phone and web.
               </Text>
-              <View style={styles.ctaRow}>
-                <Pressable style={styles.ctaPrimary} onPress={() => router.push('/signup' as any)}>
+              <View
+                style={[
+                  styles.ctaRow,
+                  layout.isPhone && { flexDirection: 'column', width: '100%' },
+                ]}
+              >
+                <Pressable
+                  style={[styles.ctaPrimary, layout.isPhone && { width: '100%' }]}
+                  onPress={() => router.push('/signup' as any)}
+                >
                   <Text style={styles.ctaPrimaryText}>Get started free</Text>
                 </Pressable>
-                <Pressable style={styles.ctaGhost} onPress={() => goSearch()}>
+                <Pressable
+                  style={[styles.ctaGhost, layout.isPhone && { width: '100%' }]}
+                  onPress={() => goSearch()}
+                >
                   <Text style={styles.ctaGhostText}>Browse homes</Text>
                 </Pressable>
               </View>
@@ -241,17 +403,13 @@ export default function WebHomePage() {
           </View>
         </>
       )}
+
       <WebFooter />
     </ScrollView>
   );
 }
 
-function gridWidth(screenW: number, cols: number) {
-  const pad = 48;
-  const gap = 20;
-  const max = Math.min(screenW, 1200) - pad;
-  return (max - gap * (cols - 1)) / cols;
-}
+/* ── Small helpers ─────────────────────────────────────────── */
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
@@ -268,22 +426,26 @@ function Section({
   action,
   onAction,
   children,
+  pad,
+  titleSize,
 }: {
   title: string;
   subtitle?: string;
   action?: string;
   onAction?: () => void;
   children: React.ReactNode;
+  pad: number;
+  titleSize: number;
 }) {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, { paddingHorizontal: pad }]}>
       <View style={styles.sectionHead}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[styles.sectionTitle, { fontSize: titleSize }]}>{title}</Text>
           {subtitle ? <Text style={styles.sectionSub}>{subtitle}</Text> : null}
         </View>
         {action && onAction ? (
-          <Pressable onPress={onAction}>
+          <Pressable onPress={onAction} hitSlop={8}>
             <Text style={styles.sectionAction}>{action} →</Text>
           </Pressable>
         ) : null}
@@ -316,6 +478,8 @@ function HowCard({
   );
 }
 
+/* ── Styles ────────────────────────────────────────────────── */
+
 const styles = StyleSheet.create({
   page: {
     flex: 1,
@@ -325,10 +489,9 @@ const styles = StyleSheet.create({
   pageContent: {
     flexGrow: 1,
   },
+
   hero: {
-    minHeight: 560,
-    justifyContent: 'center',
-    paddingVertical: 64,
+    justify: 'center',
     overflow: 'hidden',
     position: 'relative',
   },
@@ -343,7 +506,6 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: spacing.xl,
   },
   heroBadge: {
     alignSelf: 'flex-start',
@@ -361,38 +523,39 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   heroTitle: {
-    fontSize: 48,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -1.2,
-    lineHeight: 54,
     marginBottom: spacing.md,
   },
   heroSub: {
-    fontSize: 18,
-    lineHeight: 28,
     color: 'rgba(255,255,255,0.85)',
     maxWidth: 560,
-    marginBottom: spacing.xxl,
   },
+
   searchCard: {
     backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: spacing.lg,
-    maxWidth: 720,
     ...shadows.card,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 10,
+  },
+  searchInputWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: colors.background,
     borderRadius: radius.full,
-    paddingLeft: spacing.lg,
-    paddingRight: 6,
+    paddingLeft: 16,
+    paddingRight: 12,
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 48,
   },
   searchInput: {
     flex: 1,
@@ -405,8 +568,9 @@ const styles = StyleSheet.create({
   searchBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: 22,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: radius.full,
+    alignItems: 'center',
   },
   searchBtnText: {
     color: '#fff',
@@ -417,7 +581,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: spacing.md,
+    marginTop: 14,
   },
   chip: {
     backgroundColor: colors.primarySoft,
@@ -429,17 +593,16 @@ const styles = StyleSheet.create({
     ...typography.captionBold,
     color: colors.primary,
   },
+
   statsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xxl,
-    marginTop: spacing.xxxl,
   },
   stat: {
-    minWidth: 100,
+    minWidth: 90,
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     color: '#fff',
   },
@@ -448,22 +611,21 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
   },
+
   section: {
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxxl,
+    paddingVertical: 40,
   },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
-    gap: spacing.lg,
+    marginBottom: 24,
+    gap: 16,
   },
   sectionTitle: {
-    fontSize: 32,
     fontWeight: '800',
     color: colors.text,
     letterSpacing: -0.6,
@@ -482,17 +644,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 20,
   },
+
   howBand: {
     backgroundColor: colors.primarySoft,
-    paddingVertical: spacing.xxxl + 8,
-    paddingHorizontal: spacing.xl,
   },
   howTitle: {
-    fontSize: 32,
     fontWeight: '800',
     color: colors.text,
     textAlign: 'center',
-    marginBottom: spacing.xxl,
     letterSpacing: -0.5,
   },
   howGrid: {
@@ -506,11 +665,10 @@ const styles = StyleSheet.create({
   },
   howCard: {
     flex: 1,
-    minWidth: 240,
-    maxWidth: 360,
+    minWidth: 260,
     backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: spacing.xl,
+    padding: 24,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -519,7 +677,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.accent,
     letterSpacing: 1,
-    marginBottom: spacing.md,
+    marginBottom: 12,
   },
   howIcon: {
     width: 48,
@@ -528,47 +686,44 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: 12,
   },
   howCardTitle: {
     ...typography.subtitle,
     color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: 8,
   },
   howCardBody: {
     ...typography.body,
     color: colors.textSecondary,
   },
+
   ctaBand: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxxl,
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
   },
   ctaGradient: {
     borderRadius: 28,
-    padding: spacing.xxxl,
     alignItems: 'center',
   },
   ctaTitle: {
-    fontSize: 28,
     fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: 8,
   },
   ctaSub: {
     ...typography.body,
     color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
     maxWidth: 420,
-    marginBottom: spacing.xl,
+    marginBottom: 24,
   },
   ctaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: 12,
     justifyContent: 'center',
   },
   ctaPrimary: {
@@ -576,6 +731,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: radius.full,
+    alignItems: 'center',
   },
   ctaPrimaryText: {
     ...typography.bodyBold,
@@ -587,6 +743,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: radius.full,
+    alignItems: 'center',
   },
   ctaGhostText: {
     ...typography.bodyBold,

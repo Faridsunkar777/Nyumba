@@ -32,15 +32,15 @@ function RootNavigator() {
     const inOnboarding = segments[0] === '(onboarding)';
     const inAuth = segments[0] === '(auth)';
 
-    // Force onboarding if not completed
+    // 1. Onboarding still required once
     if (!onboardingDone && !inOnboarding) {
       router.replace('/(onboarding)');
     }
-    // Logged-in users should not stay on auth/onboarding
+    // 2. Logged-in users shouldn't stay on auth/onboarding
     else if (onboardingDone && isAuthenticated && (inOnboarding || inAuth)) {
       router.replace('/(tabs)');
     }
-    // Guests are allowed into the app
+    // 3. Guests are allowed into the app (no force-redirect to auth)
   }, [hydrated, onboardingDone, isAuthenticated, segments, router]);
 
   if (!hydrated) {
@@ -129,7 +129,7 @@ const styles = {
     minHeight: Platform.OS === 'web' ? ('100vh' as unknown as number) : undefined,
     ...(Platform.OS === 'web'
       ? ({
-          maxWidth: 1100,
+          maxWidth: 1200,
           width: '100%',
           alignSelf: 'center' as const,
         } as const)

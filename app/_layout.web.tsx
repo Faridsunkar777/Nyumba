@@ -15,7 +15,7 @@ export { ErrorBoundary } from 'expo-router';
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
-  const { hydrated, onboardingDone } = useApp();
+  const { hydrated, onboardingDone, completeOnboarding, isAuthenticated } = useApp();
   const segments = useSegments();
   const router = useRouter();
 
@@ -23,17 +23,37 @@ function RootNavigator() {
     if (hydrated) SplashScreen.hideAsync();
   }, [hydrated]);
 
-  // Skip onboarding on web — go straight to the site
+  // Web: skip onboarding + never force guests into auth
   useEffect(() => {
     if (!hydrated) return;
+
+    // Auto-complete onboarding on web
     if (!onboardingDone) {
-      // complete onboarding silently for web UX
+      completeOnboarding();
     }
+
     const inOnboarding = segments[0] === '(onboarding)';
+    const inAuth = segments[0] === '(auth)';
+    const atRoot = !segments[0];
+
+    // Always leave onboarding
     if (inOnboarding) {
       router.replace('/(tabs)');
+      return;
     }
-  }, [hydrated, onboardingDone, segments, router]);
+
+    // Guests landing on / or stuck on auth index → send to home
+    // (only force away from auth if they didn't intentionally go to /login or /signup)
+    if (!isAuthenticated && (atRoot || (inAuth && segments.length === 1))) {
+      router.replace('/(tabs)');
+      return;
+    }
+
+    // Logged-in users shouldn't stay on auth/onboarding
+    if (isAuthenticated && (inOnboarding || inAuth)) {
+      router.replace('/(tabs)');
+    }
+  }, [hydrated, onboardingDone, isAuthenticated, segments, router, completeOnboarding]);
 
   if (!hydrated) {
     return (
@@ -43,29 +63,36 @@ function RootNavigator() {
     );
   }
 
-  // Auth is a full-page website layout (no main nav/footer)
+  // Auth pages = full page (no top nav / footer)
   const isAuth = segments[0] === '(auth)';
-  // Property / agency / modals still use site chrome
+
+  // Detail pages still need the site chrome
   const needsOuterShell =
     !isAuth &&
     (segments[0] === 'agency' ||
       segments[0] === 'property' ||
       segments[0] === 'filters' ||
-      segments[0] === 'county-picker');
+      segments[0] === 'county-picker' ||
+      segments[0] === 'project' ||
+      segments[0] === 'confirmed');
 
   const stack = (
     <Stack
+      initialRouteName="(tabs)"
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
         animation: 'fade',
       }}
     >
-      <Stack.Screen name="(onboarding)" />
-      <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(onboarding)" />
       <Stack.Screen name="agency/[id]" />
       <Stack.Screen name="property/[id]" />
+      <Stack.Screen name="property/buy/[id]" />
+      <Stack.Screen name="project/[id]" />
+      <Stack.Screen name="confirmed" options={{ presentation: 'modal' }} />
       <Stack.Screen name="filters" options={{ presentation: 'modal' }} />
       <Stack.Screen name="county-picker" options={{ presentation: 'modal' }} />
     </Stack>

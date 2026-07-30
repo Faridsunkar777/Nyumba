@@ -34,8 +34,8 @@ function pathActive(pathname: string, match: readonly string[]) {
 
 /**
  * Website chrome: top nav only.
- * Page content fills the remaining viewport and scrolls inside.
- * Footer is rendered by each page (WebFooter) so it sits below content.
+ * - Phone / tablet (< 1100): logo + actions on row 1, nav pills on row 2
+ * - Desktop (≥ 1100): single row with centered nav
  */
 export function WebShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -43,20 +43,25 @@ export function WebShell({ children }: { children: ReactNode }) {
   const { county } = useApp();
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
-  const compact = width < 860;
+
+  // iPad Air + iPad Pro both use the two-row nav
+  const isDesktop = width >= 1100;
+  const isPhone = width < 640;
+  const pad = isPhone ? 16 : isDesktop ? 40 : 28;
 
   const displayName = profile?.fullName || user?.email?.split('@')[0];
 
   return (
     <View style={styles.root}>
       <View style={styles.topBar}>
-        <View style={styles.topInner}>
+        {/* Row 1: brand + actions */}
+        <View style={[styles.topInner, { paddingHorizontal: pad }]}>
           <Pressable style={styles.brand} onPress={() => router.push('/' as any)}>
             <Image source={Logo} style={styles.logo} contentFit="contain" />
             <Text style={styles.brandName}>Nyumba</Text>
           </Pressable>
 
-          {!compact && (
+          {isDesktop && (
             <View style={styles.nav}>
               {NAV.map((item) => {
                 const active = pathActive(pathname, item.match);
@@ -93,7 +98,7 @@ export function WebShell({ children }: { children: ReactNode }) {
                 onPress={() => router.push('/profile' as any)}
               >
                 <Ionicons name="person-circle" size={22} color={colors.primary} />
-                {!compact && (
+                {isDesktop && (
                   <Text style={styles.accountText} numberOfLines={1}>
                     {displayName}
                   </Text>
@@ -107,11 +112,12 @@ export function WebShell({ children }: { children: ReactNode }) {
           </View>
         </View>
 
-        {compact && (
+        {/* Row 2: nav pills — phone + tablet only */}
+        {!isDesktop && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.mobileNav}
+            contentContainerStyle={[styles.mobileNav, { paddingHorizontal: pad }]}
           >
             {NAV.map((item) => {
               const active = pathActive(pathname, item.match);
@@ -131,7 +137,6 @@ export function WebShell({ children }: { children: ReactNode }) {
         )}
       </View>
 
-      {/* Must have flex:1 so tab scenes get a real height (not 0) */}
       <View style={styles.main}>{children}</View>
     </View>
   );
@@ -163,9 +168,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    gap: spacing.md,
+    paddingVertical: 12,
+    gap: 12,
   },
   brand: {
     flexDirection: 'row',
@@ -208,7 +212,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 8,
   },
   countyChip: {
     flexDirection: 'row',
@@ -248,15 +252,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   mobileNav: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    gap: spacing.xs,
+    paddingBottom: 10,
+    gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   mobileNavItem: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.full,
-    marginRight: 6,
   },
   main: {
     flex: 1,
